@@ -28,7 +28,7 @@ AboutDialog::AboutDialog(QWidget* parent)
            "https://github.com/plummersSoftwareLLC/TinyRetroPad</a></p>"
            "<p>Features maintainer-curated themes, standard Notepad keybindings, "
            "native dialogs, and reliable text handling.</p>"
-           "<p><small>Licensed under the Apache License, Version 2.0.</small></p>"),
+           "<p><small>Licensed under the MIT License.</small></p>"),
         this
     );
     infoLabel->setWordWrap(true);

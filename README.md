@@ -1,6 +1,6 @@
 # YANP — Yet Another Notepad
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-brightgreen.svg)]()
 [![Qt](https://img.shields.io/badge/Qt-6-green.svg)]()
 
@@ -120,7 +120,7 @@ YANP/
 ├── CMakePresets.json           # Presets for Release, Debug, Test
 ├── README.md                   # Project overview & guide
 ├── CONTRIBUTING.md             # Contribution guidelines & Theme contribution guide
-├── LICENSE                     # Apache 2.0 license
+├── LICENSE                     # MIT license
 ├── NOTICE                      # Upstream attribution notice
 ├── .gitignore
 ├── src/
@@ -207,4 +207,4 @@ YANP/
 YANP is inspired by **TinyRetroPad** by Dave Plummer (Plummer's Software LLC).
 Reference: [https://github.com/plummersSoftwareLLC/TinyRetroPad](https://github.com/plummersSoftwareLLC/TinyRetroPad)
 
-Licensed under the **Apache License, Version 2.0**. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.
+Licensed under the **MIT License**. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.
