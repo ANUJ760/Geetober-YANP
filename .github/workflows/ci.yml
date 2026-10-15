@@ -35,5 +35,7 @@ jobs:
           cmake --build build
 
       - name: Run Unit Tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: |
           ctest --test-dir build --output-on-failure

@@ -35,3 +35,10 @@ add_executable(test_themes
 target_include_directories(test_themes PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_themes PRIVATE Qt6::Core Qt6::Widgets Qt6::Test)
 add_test(NAME test_themes COMMAND test_themes)
+
+set_tests_properties(
+    test_filemanager
+    test_search
+    test_themes
+    PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
