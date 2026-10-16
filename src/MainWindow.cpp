@@ -456,7 +456,7 @@ void MainWindow::onThemeSelected(QAction* action) {
 }
 
 void MainWindow::onViewHelp() {
-    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/plummersSoftwareLLC/TinyRetroPad")));
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/Geektoberfest/Geetober-YANP/")));
 }
 
 void MainWindow::onAbout() {
