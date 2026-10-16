@@ -1,6 +1,8 @@
 #include <QTest>
 #include <QTemporaryDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QSignalSpy>
 #include "FileManager.h"
 
 using namespace YANP;
@@ -10,6 +12,8 @@ class TestFileManager : public QObject {
 
 private slots:
     void initTestCase();
+    void cleanupTestCase();
+    void init();
     void testInitialState();
     void testOpenNonExistentFile();
     void testSaveAndOpenUtf8();
@@ -17,6 +21,13 @@ private slots:
     void testUtf16LeHandling();
     void testLineEndingDetectionAndPreservation();
     void testModifiedStateAndTitle();
+    void testRecentFilesEmptyInitially();
+    void testRecordRecentFileDeduplicationAndOrder();
+    void testRecentFilesMaxCap();
+    void testRemoveRecentFile();
+    void testClearRecentFiles();
+    void testOpenFileAndSaveFileUpdatesRecentFiles();
+    void testRecentFilesSignals();
 
 private:
     std::unique_ptr<QTemporaryDir> m_tempDir;
@@ -25,6 +36,18 @@ private:
 void TestFileManager::initTestCase() {
     m_tempDir = std::make_unique<QTemporaryDir>();
     QVERIFY(m_tempDir->isValid());
+    QCoreApplication::setOrganizationName(QStringLiteral("Geektober"));
+    QCoreApplication::setApplicationName(QStringLiteral("YANP_Test"));
+}
+
+void TestFileManager::cleanupTestCase() {
+    FileManager fm;
+    fm.clearRecentFiles();
+}
+
+void TestFileManager::init() {
+    FileManager fm;
+    fm.clearRecentFiles();
 }
 
 void TestFileManager::testInitialState() {
@@ -148,6 +171,134 @@ void TestFileManager::testModifiedStateAndTitle() {
 
     fm.setModified(false);
     QCOMPARE(fm.windowTitle(), QStringLiteral("notes.txt - YANP"));
+}
+
+void TestFileManager::testRecentFilesEmptyInitially() {
+    FileManager fm;
+    QVERIFY(fm.recentFiles().isEmpty());
+}
+
+void TestFileManager::testRecordRecentFileDeduplicationAndOrder() {
+    FileManager fm;
+    QString file1 = m_tempDir->filePath(QStringLiteral("file1.txt"));
+    QString file2 = m_tempDir->filePath(QStringLiteral("file2.txt"));
+    QString file3 = m_tempDir->filePath(QStringLiteral("file3.txt"));
+
+    for (const QString& path : {file1, file2, file3}) {
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("content");
+        f.close();
+    }
+
+    fm.recordRecentFile(file1);
+    fm.recordRecentFile(file2);
+    fm.recordRecentFile(file3);
+
+    QStringList list = fm.recentFiles();
+    QCOMPARE(list.size(), 3);
+    QCOMPARE(list.at(0), QFileInfo(file3).canonicalFilePath());
+    QCOMPARE(list.at(1), QFileInfo(file2).canonicalFilePath());
+    QCOMPARE(list.at(2), QFileInfo(file1).canonicalFilePath());
+
+    // Record file1 again - should move to top with no duplicates
+    fm.recordRecentFile(file1);
+    list = fm.recentFiles();
+    QCOMPARE(list.size(), 3);
+    QCOMPARE(list.at(0), QFileInfo(file1).canonicalFilePath());
+    QCOMPARE(list.at(1), QFileInfo(file3).canonicalFilePath());
+    QCOMPARE(list.at(2), QFileInfo(file2).canonicalFilePath());
+}
+
+void TestFileManager::testRecentFilesMaxCap() {
+    FileManager fm;
+    QStringList createdFiles;
+    for (int i = 1; i <= 15; ++i) {
+        QString path = m_tempDir->filePath(QStringLiteral("cap_file_%1.txt").arg(i));
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("test");
+        f.close();
+        createdFiles.append(path);
+        fm.recordRecentFile(path);
+    }
+
+    QStringList list = fm.recentFiles();
+    QCOMPARE(list.size(), 10);
+    QCOMPARE(list.first(), QFileInfo(createdFiles.last()).canonicalFilePath());
+    QCOMPARE(list.last(), QFileInfo(createdFiles.at(5)).canonicalFilePath());
+}
+
+void TestFileManager::testRemoveRecentFile() {
+    FileManager fm;
+    QString file1 = m_tempDir->filePath(QStringLiteral("rm1.txt"));
+    QString file2 = m_tempDir->filePath(QStringLiteral("rm2.txt"));
+    for (const QString& path : {file1, file2}) {
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("data");
+        f.close();
+        fm.recordRecentFile(path);
+    }
+
+    QCOMPARE(fm.recentFiles().size(), 2);
+    fm.removeRecentFile(file1);
+
+    QStringList list = fm.recentFiles();
+    QCOMPARE(list.size(), 1);
+    QCOMPARE(list.first(), QFileInfo(file2).canonicalFilePath());
+}
+
+void TestFileManager::testClearRecentFiles() {
+    FileManager fm;
+    QString file1 = m_tempDir->filePath(QStringLiteral("clear1.txt"));
+    QFile f(file1);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("data");
+    f.close();
+    fm.recordRecentFile(file1);
+    QCOMPARE(fm.recentFiles().size(), 1);
+
+    fm.clearRecentFiles();
+    QVERIFY(fm.recentFiles().isEmpty());
+}
+
+void TestFileManager::testOpenFileAndSaveFileUpdatesRecentFiles() {
+    FileManager fm;
+    QString path = m_tempDir->filePath(QStringLiteral("save_open_recent.txt"));
+
+    FileResult saveRes = fm.saveFile(path, QStringLiteral("Testing"));
+    QVERIFY(saveRes.success);
+    QCOMPARE(fm.recentFiles().size(), 1);
+    QCOMPARE(fm.recentFiles().first(), QFileInfo(path).canonicalFilePath());
+
+    fm.clearRecentFiles();
+    QVERIFY(fm.recentFiles().isEmpty());
+
+    FileResult openRes = fm.openFile(path);
+    QVERIFY(openRes.success);
+    QCOMPARE(fm.recentFiles().size(), 1);
+    QCOMPARE(fm.recentFiles().first(), QFileInfo(path).canonicalFilePath());
+}
+
+void TestFileManager::testRecentFilesSignals() {
+    FileManager fm;
+    QSignalSpy spy(&fm, &FileManager::recentFilesChanged);
+
+    QString path = m_tempDir->filePath(QStringLiteral("sig_test.txt"));
+    QFile f(path);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("signal test");
+    f.close();
+
+    fm.recordRecentFile(path);
+    QCOMPARE(spy.count(), 1);
+
+    fm.removeRecentFile(path);
+    QCOMPARE(spy.count(), 2);
+
+    fm.clearRecentFiles();
+    QCOMPARE(spy.count(), 3);
 }
 
 QTEST_MAIN(TestFileManager)

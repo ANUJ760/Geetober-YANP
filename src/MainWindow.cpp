@@ -47,7 +47,9 @@ MainWindow::MainWindow(QWidget* parent)
     // Connect file manager signals
     connect(m_fileManager.get(), &FileManager::modifiedChanged, this, &MainWindow::updateWindowTitle);
     connect(m_fileManager.get(), &FileManager::fileChanged, this, &MainWindow::updateWindowTitle);
+    connect(m_fileManager.get(), &FileManager::recentFilesChanged, this, &MainWindow::updateRecentFilesMenu);
 
+    updateRecentFilesMenu();
     loadSettings();
     updateWindowTitle();
     updateStatusBar();
@@ -70,6 +72,8 @@ void MainWindow::createMenus() {
 
     auto* openAction = fileMenu->addAction(tr("&Open..."), this, &MainWindow::onOpen);
     openAction->setShortcut(QKeySequence::Open);
+
+    m_recentFilesMenu = fileMenu->addMenu(tr("Open &Recent"));
 
     auto* saveAction = fileMenu->addAction(tr("&Save"), this, &MainWindow::onSave);
     saveAction->setShortcut(QKeySequence::Save);
@@ -232,7 +236,63 @@ void MainWindow::onOpen() {
         return;
     }
 
-    openFileFromPath(fileName);
+    loadFile(fileName);
+}
+
+void MainWindow::openRecentFile(const QString& path) {
+    if (!maybeSave()) {
+        return;
+    }
+
+    if (!QFileInfo::exists(path)) {
+        QMessageBox::warning(
+            this,
+            tr("YANP"),
+            tr("File no longer exists: %1").arg(path)
+        );
+        m_fileManager->removeRecentFile(path);
+        return;
+    }
+
+    loadFile(path);
+}
+
+void MainWindow::updateRecentFilesMenu() {
+    if (!m_recentFilesMenu) {
+        return;
+    }
+
+    m_recentFilesMenu->clear();
+
+    const QStringList files = m_fileManager->recentFiles();
+    if (files.isEmpty()) {
+        auto* noRecentAction = m_recentFilesMenu->addAction(tr("No Recent Files"));
+        noRecentAction->setEnabled(false);
+        m_recentFilesMenu->setEnabled(false);
+        return;
+    }
+
+    m_recentFilesMenu->setEnabled(true);
+    for (int i = 0; i < files.size(); ++i) {
+        const QString& filePath = files.at(i);
+        QFileInfo fi(filePath);
+        QString displayName = fi.fileName();
+        if (displayName.isEmpty()) {
+            displayName = filePath;
+        }
+
+        auto* action = m_recentFilesMenu->addAction(displayName, this, [this, filePath]() {
+            openRecentFile(filePath);
+        });
+        action->setData(filePath);
+        action->setToolTip(filePath);
+        action->setStatusTip(filePath);
+    }
+
+    m_recentFilesMenu->addSeparator();
+    m_recentFilesMenu->addAction(tr("Clear Recent Files"), this, [this]() {
+        m_fileManager->clearRecentFiles();
+    });
 }
 
 bool MainWindow::openFileFromPath(const QString& filePath) {
@@ -240,6 +300,10 @@ bool MainWindow::openFileFromPath(const QString& filePath) {
         return false;
     }
 
+    return loadFile(filePath);
+}
+
+bool MainWindow::loadFile(const QString& filePath) {
     FileResult res = m_fileManager->openFile(filePath);
     if (!res.success) {
         QMessageBox::critical(this, tr("Error Opening File"), res.errorMessage);
