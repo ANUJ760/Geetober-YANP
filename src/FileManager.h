@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 #include <QByteArray>
 #include <QObject>
 
@@ -28,6 +29,8 @@ struct FileResult {
 class FileManager : public QObject {
     Q_OBJECT
 public:
+    static constexpr int MaxRecentFiles = 10;
+
     explicit FileManager(QObject* parent = nullptr);
 
     void reset();
@@ -51,9 +54,15 @@ public:
     QString lineEndingName() const;
     void setLineEnding(LineEnding le);
 
+    QStringList recentFiles() const;
+    void recordRecentFile(const QString& path);
+    void removeRecentFile(const QString& path);
+    void clearRecentFiles();
+
 signals:
     void modifiedChanged(bool modified);
     void fileChanged(const QString& filePath);
+    void recentFilesChanged();
 
 private:
     QString m_filePath;

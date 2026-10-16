@@ -28,6 +28,8 @@ private slots:
     // File actions
     void onNew();
     void onOpen();
+    void openRecentFile(const QString& path);
+    void updateRecentFilesMenu();
     bool onSave();
     bool onSaveAs();
     void onPageSetup();
@@ -70,6 +72,7 @@ private:
     void createMenus();
     void createStatusBar();
     bool maybeSave();
+    bool loadFile(const QString& filePath);
     void loadSettings();
     void saveSettings();
     void populateThemesMenu(QMenu* themeMenu);
@@ -93,6 +96,7 @@ private:
     QAction* m_wordWrapAction = nullptr;
     QAction* m_statusBarAction = nullptr;
 
+    QMenu* m_recentFilesMenu = nullptr;
     QActionGroup* m_themeActionGroup = nullptr;
 };
 

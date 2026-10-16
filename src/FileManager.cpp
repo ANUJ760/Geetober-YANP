@@ -5,6 +5,23 @@
 #include <QStringDecoder>
 #include <QStringEncoder>
 #include <QSaveFile>
+#include <QSettings>
+
+namespace {
+
+QString normalizePath(const QString& path) {
+    if (path.isEmpty()) {
+        return QString();
+    }
+    QFileInfo fi(path);
+    QString canonical = fi.canonicalFilePath();
+    if (!canonical.isEmpty()) {
+        return canonical;
+    }
+    return QDir::cleanPath(fi.absoluteFilePath());
+}
+
+} // namespace
 
 namespace YANP {
 
@@ -100,6 +117,8 @@ FileResult FileManager::openFile(const QString& filePath) {
     result.success = true;
     result.content = decodedContent;
 
+    recordRecentFile(m_filePath);
+
     emit modifiedChanged(false);
     emit fileChanged(m_filePath);
 
@@ -177,6 +196,8 @@ FileResult FileManager::saveFile(const QString& filePath, const QString& content
 
     result.success = true;
     result.content = content;
+
+    recordRecentFile(m_filePath);
 
     emit modifiedChanged(false);
     emit fileChanged(m_filePath);
@@ -260,6 +281,75 @@ QString FileManager::lineEndingName() const {
 
 void FileManager::setLineEnding(LineEnding le) {
     m_lineEnding = le;
+}
+
+QStringList FileManager::recentFiles() const {
+    QSettings settings;
+    QVariant val = settings.value(QStringLiteral("recentFiles/list"));
+    QStringList result;
+
+    if (val.isValid()) {
+        const QStringList rawList = val.toStringList();
+        for (const QString& item : rawList) {
+            QString trimmed = item.trimmed();
+            if (!trimmed.isEmpty() && !result.contains(trimmed)) {
+                result.append(trimmed);
+                if (result.size() >= MaxRecentFiles) {
+                    break;
+                }
+            }
+        }
+    }
+    return result;
+}
+
+void FileManager::recordRecentFile(const QString& path) {
+    QString normalized = normalizePath(path);
+    if (normalized.isEmpty()) {
+        return;
+    }
+
+    QStringList files = recentFiles();
+    files.removeAll(normalized);
+    files.prepend(normalized);
+
+    while (files.size() > MaxRecentFiles) {
+        files.removeLast();
+    }
+
+    QSettings settings;
+    settings.setValue(QStringLiteral("recentFiles/list"), files);
+
+    emit recentFilesChanged();
+}
+
+void FileManager::removeRecentFile(const QString& path) {
+    if (path.isEmpty()) {
+        return;
+    }
+
+    QString normalized = normalizePath(path);
+    QStringList files = recentFiles();
+    bool changed = false;
+
+    if (files.removeAll(path) > 0) {
+        changed = true;
+    }
+    if (!normalized.isEmpty() && normalized != path && files.removeAll(normalized) > 0) {
+        changed = true;
+    }
+
+    if (changed) {
+        QSettings settings;
+        settings.setValue(QStringLiteral("recentFiles/list"), files);
+        emit recentFilesChanged();
+    }
+}
+
+void FileManager::clearRecentFiles() {
+    QSettings settings;
+    settings.remove(QStringLiteral("recentFiles/list"));
+    emit recentFilesChanged();
 }
 
 } // namespace YANP
