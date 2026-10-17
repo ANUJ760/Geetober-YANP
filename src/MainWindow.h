@@ -56,6 +56,7 @@ private slots:
 
     // View actions
     void onToggleStatusBar(bool checked);
+    void onDocumentStatistics();
     void onThemeSelected(QAction* action);
 
     // Help actions
