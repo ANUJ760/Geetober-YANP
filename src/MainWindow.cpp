@@ -15,6 +15,37 @@
 
 namespace YANP {
 
+namespace {
+
+struct TextStats {
+    int lines = 0;
+    int words = 0;
+    int charsWithSpaces = 0;
+    int charsWithoutSpaces = 0;
+};
+
+TextStats computeTextStats(const QString& text, int lines) {
+    TextStats stats;
+    stats.lines = text.isEmpty() ? 0 : lines;
+    stats.charsWithSpaces = text.size();
+
+    bool inWord = false;
+    for (const QChar c : text) {
+        if (c.isSpace()) {
+            inWord = false;
+        } else {
+            stats.charsWithoutSpaces++;
+            if (!inWord) {
+                inWord = true;
+                stats.words++;
+            }
+        }
+    }
+    return stats;
+}
+
+} // namespace
+
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       m_fileManager(std::make_unique<FileManager>(this)),
@@ -162,6 +193,8 @@ void MainWindow::createMenus() {
     m_statusBarAction = viewMenu->addAction(tr("&Status Bar"), this, &MainWindow::onToggleStatusBar);
     m_statusBarAction->setCheckable(true);
     m_statusBarAction->setChecked(true);
+
+    viewMenu->addAction(tr("Document &Statistics..."), this, &MainWindow::onDocumentStatistics);
 
     QMenu* themeMenu = viewMenu->addMenu(tr("&Theme"));
     populateThemesMenu(themeMenu);
@@ -462,6 +495,33 @@ void MainWindow::onViewHelp() {
 void MainWindow::onAbout() {
     AboutDialog dlg(this);
     dlg.exec();
+}
+
+void MainWindow::onDocumentStatistics() {
+    const QString fullText = m_editor->toPlainText();
+    const TextStats doc = computeTextStats(fullText, m_editor->document()->blockCount());
+
+    QString message = tr("Document\nLines: %1\nWords: %2\nCharacters (with spaces): %3\nCharacters (without spaces): %4")
+        .arg(doc.lines)
+        .arg(doc.words)
+        .arg(doc.charsWithSpaces)
+        .arg(doc.charsWithoutSpaces);
+
+    const QTextCursor cursor = m_editor->textCursor();
+    if (cursor.hasSelection()) {
+        const QString selectedText = cursor.selectedText();
+        // Selected text uses U+2029 between paragraphs, so count those to get selection lines
+        const int selectionLines = selectedText.count(QChar::ParagraphSeparator) + 1;
+        const TextStats sel = computeTextStats(selectedText, selectionLines);
+
+        message += tr("\n\nSelection\nLines: %1\nWords: %2\nCharacters (with spaces): %3\nCharacters (without spaces): %4")
+            .arg(sel.lines)
+            .arg(sel.words)
+            .arg(sel.charsWithSpaces)
+            .arg(sel.charsWithoutSpaces);
+    }
+
+    QMessageBox::information(this, tr("Document Statistics"), message);
 }
 
 void MainWindow::onDocumentTextChanged() {
