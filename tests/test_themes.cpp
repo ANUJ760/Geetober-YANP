@@ -11,6 +11,7 @@ private slots:
     void init();
     void testBuiltInThemesRegistered();
     void testEnchantedLibraryPalette();
+    void testDreamscapeIslandsPalette();
     void testThemeValidity();
     void testDuplicateRegistrationRejected();
     void testInvalidThemeRejected();
@@ -33,6 +34,22 @@ void TestThemes::testBuiltInThemesRegistered() {
     QVERIFY(ThemeRegistry::instance().hasTheme(QStringLiteral("amber-crt")));
     QVERIFY(ThemeRegistry::instance().hasTheme(QStringLiteral("solarized-dark")));
     QVERIFY(ThemeRegistry::instance().hasTheme(QStringLiteral("enchanted-library")));
+    QVERIFY(ThemeRegistry::instance().hasTheme(QStringLiteral("dreamscape-islands")));
+}
+
+void TestThemes::testDreamscapeIslandsPalette() {
+    auto theme = ThemeRegistry::instance().getTheme(QStringLiteral("dreamscape-islands"));
+    QVERIFY(theme.has_value());
+    QCOMPARE(theme->name, QStringLiteral("Dreamscape: Floating Islands"));
+    QCOMPARE(theme->editorBackground, QColor(0x17, 0x18, 0x2B));
+    QCOMPARE(theme->textColor, QColor(0xE9, 0xE5, 0xFF));
+    QCOMPARE(theme->windowBackground, QColor(0x10, 0x13, 0x23));
+    QCOMPARE(theme->selectionBackground, QColor(0x51, 0x45, 0x6F));
+    QCOMPARE(theme->selectedTextColor, QColor(0xFF, 0xFF, 0xFF));
+    QCOMPARE(theme->caretColor, QColor(0xFF, 0xCA, 0x9B));
+    QCOMPARE(theme->statusBarBackground, QColor(0x25, 0x25, 0x40));
+    QCOMPARE(theme->statusBarTextColor, QColor(0xC4, 0xBD, 0xE8));
+    QCOMPARE(theme->borderColor, QColor(0x38, 0x38, 0x5C));
 }
 
 void TestThemes::testEnchantedLibraryPalette() {
